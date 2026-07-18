@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triac ($TRI) — Fixed-Supply Payment Token on Solana</title>
+<meta name="description" content="Triac ($TRI) is a fixed-supply, verifiable SPL token on Solana. 21,000,000 TRI, mint authority disabled, freeze never enabled.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0C16;
+    --bg-raise:#12162A;
+    --line:#232847;
+    --teal:#49E0C8;
+    --violet:#8B6BFF;
+    --blue:#5C8BFF;
+    --text:#E9EBF7;
+    --text-dim:#9198B8;
+    --text-faint:#5A6188;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    line-height:1.6;
+    overflow-x:hidden;
+  }
+  .display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  a{color:var(--teal);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--teal);outline-offset:3px;}
+
+  .wrap{max-width:920px;margin:0 auto;padding:0 28px;}
+
+  /* ---------- background circuit pulse ---------- */
+  .circuit-bg{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    opacity:.5;
+  }
+
+  /* ---------- nav ---------- */
+  header{
+    position:sticky;top:0;z-index:20;
+    backdrop-filter:blur(10px);
+    background:rgba(10,12,22,.75);
+    border-bottom:1px solid var(--line);
+  }
+  nav.wrap{
+    display:flex;align-items:center;justify-content:space-between;
+    height:64px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:18px;letter-spacing:.02em;}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--violet));box-shadow:0 0 12px var(--teal);}
+  nav ul{list-style:none;display:flex;gap:28px;}
+  nav ul a{color:var(--text-dim);font-size:14px;font-weight:500;}
+  nav ul a:hover{color:var(--text);text-decoration:none;}
+  @media (max-width:640px){ nav ul{display:none;} }
+
+  /* ---------- hero ---------- */
+  .hero{
+    position:relative;z-index:1;
+    padding:88px 0 64px;
+    text-align:center;
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--teal);
+    border:1px solid rgba(73,224,200,.3);
+    background:rgba(73,224,200,.06);
+    padding:6px 14px;border-radius:100px;
+    margin-bottom:28px;
+  }
+  .eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(73,224,200,.5);}50%{opacity:.6;box-shadow:0 0 0 5px rgba(73,224,200,0);}}
+
+  h1.hero-title{
+    font-size:clamp(40px,7vw,68px);
+    font-weight:700;
+    letter-spacing:-0.02em;
+    line-height:1.02;
+    background:linear-gradient(135deg,#fff 30%,var(--teal) 65%,var(--violet) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero-sub{
+    max-width:560px;margin:22px auto 0;
+    color:var(--text-dim);
+    font-size:17px;
+  }
+  .hero-actions{
+    display:flex;gap:14px;justify-content:center;margin-top:36px;flex-wrap:wrap;
+  }
+  .btn{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:14px;
+    padding:13px 24px;border-radius:10px;border:1px solid transparent;
+    cursor:pointer;transition:transform .15s ease, border-color .15s ease;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn:hover{transform:translateY(-1px);text-decoration:none;}
+  .btn-primary{background:linear-gradient(135deg,var(--teal),var(--blue));color:#04140F;}
+  .btn-ghost{border-color:var(--line);color:var(--text);background:transparent;}
+  .btn-ghost:hover{border-color:var(--text-faint);}
+
+  /* mint address pill */
+  .mint-pill{
+    margin:40px auto 0;max-width:600px;
+    display:flex;align-items:center;gap:10px;
+    background:var(--bg-raise);
+    border:1px solid var(--line);
+    border-radius:12px;padding:14px 18px;
+  }
+  .mint-pill .label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;}
+  .mint-pill code{
+    font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--teal);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-align:left;
+  }
+  .copy-btn{
+    background:var(--line);border:none;color:var(--text-dim);
+    width:30px;height:30px;border-radius:7px;cursor:pointer;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:13px;
+    transition:background .15s ease, color .15s ease;
+  }
+  .copy-btn:hover{background:var(--teal);color:#04140F;}
+
+  /* ---------- sections ---------- */
+  section{position:relative;z-index:1;padding:72px 0;border-top:1px solid var(--line);}
+  .section-head{margin-bottom:36px;}
+  .eyebrow-sm{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;}
+  h2{font-size:clamp(26px,4vw,34px);font-weight:600;letter-spacing:-0.01em;}
+  .section-desc{color:var(--text-dim);max-width:600px;margin-top:10px;font-size:15px;}
+
+  /* facts grid */
+  .facts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .fact{background:var(--bg-raise);padding:22px 20px;}
+  .fact .k{font-size:12px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+  .fact .v{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:600;}
+  .fact .v.teal{color:var(--teal);}
+  @media (max-width:720px){.facts-grid{grid-template-columns:1fr 1fr;}}
+  @media (max-width:480px){.facts-grid{grid-template-columns:1fr;}}
+
+  /* trust list */
+  .trust-list{display:grid;gap:14px;margin-top:8px;}
+  .trust-item{
+    display:flex;gap:16px;align-items:flex-start;
+    background:var(--bg-raise);border:1px solid var(--line);border-radius:12px;padding:18px 20px;
+  }
+  .trust-item .check{
+    flex-shrink:0;width:26px;height:26px;border-radius:50%;
+    background:rgba(73,224,200,.12);color:var(--teal);
+    display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
+    margin-top:2px;
+  }
+  .trust-item h3{font-size:15.5px;font-weight:600;margin-bottom:4px;}
+  .trust-item p{font-size:14px;color:var(--text-dim);}
+
+  /* roadmap */
+  .roadmap{position:relative;padding-left:28px;}
+  .roadmap::before{content:'';position:absolute;left:6px;top:6px;bottom:6px;width:1px;background:linear-gradient(var(--teal),var(--violet));}
+  .rm-item{position:relative;padding-bottom:32px;}
+  .rm-item:last-child{padding-bottom:0;}
+  .rm-item::before{
+    content:'';position:absolute;left:-28px;top:4px;width:13px;height:13px;border-radius:50%;
+    background:var(--bg);border:2px solid var(--teal);
+  }
+  .rm-item.done::before{background:var(--teal);}
+  .rm-phase{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+  .rm-item.done .rm-phase{color:var(--teal);}
+  .rm-title{font-weight:600;font-size:16px;margin-bottom:4px;}
+  .rm-desc{color:var(--text-dim);font-size:14px;}
+
+  /* allocation bar */
+  .alloc-bar{display:flex;height:14px;border-radius:100px;overflow:hidden;margin:24px 0 16px;border:1px solid var(--line);}
+  .alloc-seg{height:100%;}
+  .alloc-legend{display:flex;flex-wrap:wrap;gap:18px;font-size:13.5px;}
+  .alloc-legend span{display:flex;align-items:center;gap:8px;color:var(--text-dim);}
+  .alloc-legend .sw{width:10px;height:10px;border-radius:3px;}
+
+  /* links / footer */
+  .link-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;}
+  .link-card{
+    background:var(--bg-raise);border:1px solid var(--line);border-radius:12px;padding:18px 20px;
+    display:flex;justify-content:space-between;align-items:center;
+    transition:border-color .15s ease;
+  }
+  .link-card:hover{border-color:var(--teal);text-decoration:none;}
+  .link-card .name{font-weight:600;font-size:14.5px;color:var(--text);}
+  .link-card .arrow{color:var(--text-faint);}
+
+  .disclaimer{
+    font-size:13px;color:var(--text-faint);line-height:1.7;
+    background:var(--bg-raise);border:1px solid var(--line);border-radius:12px;padding:20px 22px;
+  }
+
+  footer{
+    position:relative;z-index:1;
+    border-top:1px solid var(--line);
+    padding:36px 0;text-align:center;
+    color:var(--text-faint);font-size:13px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important;transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<svg class="circuit-bg" id="circuitBg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice"></svg>
+
+<header>
+  <nav class="wrap">
+    <div class="brand"><span class="dot"></span>TRIAC</div>
+    <ul>
+      <li><a href="#facts">Facts</a></li>
+      <li><a href="#tokenomics">Tokenomics</a></li>
+      <li><a href="#trust">Trust</a></li>
+      <li><a href="#roadmap">Roadmap</a></li>
+      <li><a href="#links">Links</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <section class="hero wrap" style="border-top:none;">
+    <div class="eyebrow">Live on Solana Mainnet</div>
+    <h1 class="hero-title display">Fixed supply.<br>Verifiable on-chain.</h1>
+    <p class="hero-sub">Triac ($TRI) is a 21,000,000-supply SPL token on Solana. No further minting is possible — mint authority is permanently disabled, and freeze authority was never enabled. Nothing here asks for trust; all of it can be checked.</p>
+    <div class="hero-actions">
+      <a href="#facts" class="btn btn-primary">View verified facts</a>
+      <a href="Triac_Whitepaper_v1.docx" class="btn btn-ghost">Read whitepaper</a>
+    </div>
+    <div class="mint-pill">
+      <span class="label mono">Mint</span>
+      <code id="mintAddr">2wdpJ9jx6MscrAbtfuAFNYG8a5vYgtZggBdVu9gKLCH3</code>
+      <button class="copy-btn" onclick="copyMint()" aria-label="Copy mint address" id="copyBtn">⧉</button>
+    </div>
+  </section>
+
+  <section id="facts" class="wrap">
+    <div class="section-head">
+      <div class="eyebrow-sm mono">01 — Key facts</div>
+      <h2 class="display">What Triac is, in numbers</h2>
+      <p class="section-desc">Every figure below is a permanent, on-chain property of the token — check it yourself on Solscan or Solana Explorer.</p>
+    </div>
+    <div class="facts-grid">
+      <div class="fact"><div class="k">Token</div><div class="v">Triac (TRI)</div></div>
+      <div class="fact"><div class="k">Blockchain</div><div class="v">Solana</div></div>
+      <div class="fact"><div class="k">Standard</div><div class="v">SPL Token</div></div>
+      <div class="fact"><div class="k">Total Supply</div><div class="v teal">21,000,000</div></div>
+      <div class="fact"><div class="k">Decimals</div><div class="v">9</div></div>
+      <div class="fact"><div class="k">Mint Authority</div><div class="v teal">Disabled</div></div>
+      <div class="fact"><div class="k">Freeze Authority</div><div class="v teal">Never enabled</div></div>
+      <div class="fact"><div class="k">Holders</div><div class="v">Growing</div></div>
+      <div class="fact"><div class="k">Network</div><div class="v">Mainnet-Beta</div></div>
+    </div>
+  </section>
+
+  <section id="tokenomics" class="wrap">
+    <div class="section-head">
+      <div class="eyebrow-sm mono">02 — Tokenomics</div>
+      <h2 class="display">21,000,000 TRI. Never more.</h2>
+      <p class="section-desc">The full supply was minted once, in a single transaction. Mint authority was then disabled permanently — no team, wallet, or future decision can create additional TRI.</p>
+    </div>
+    <div class="alloc-bar">
+      <div class="alloc-seg" style="width:60%;background:var(--teal);"></div>
+      <div class="alloc-seg" style="width:25%;background:var(--violet);"></div>
+      <div class="alloc-seg" style="width:15%;background:var(--blue);"></div>
+    </div>
+    <div class="alloc-legend">
+      <span><span class="sw" style="background:var(--teal);"></span>Treasury (pending liquidity) — 60%</span>
+      <span><span class="sw" style="background:var(--violet);"></span>Future liquidity pool — 25%</span>
+      <span><span class="sw" style="background:var(--blue);"></span>Community & ecosystem — 15%</span>
+    </div>
+    <p style="margin-top:18px;font-size:13.5px;color:var(--text-faint);">Provisional allocation — will be finalized with exact wallet addresses before the liquidity pool launches.</p>
+  </section>
+
+  <section id="trust" class="wrap">
+    <div class="section-head">
+      <div class="eyebrow-sm mono">03 — Trust & security</div>
+      <h2 class="display">Designed to remove itself from the equation</h2>
+      <p class="section-desc">The most common risks in new token launches are all structurally addressed here.</p>
+    </div>
+    <div class="trust-list">
+      <div class="trust-item">
+        <div class="check">✓</div>
+        <div><h3>Supply can never inflate</h3><p>Mint authority was disabled on-chain after the initial mint. This is irreversible — verifiable directly on Solscan.</p></div>
+      </div>
+      <div class="trust-item">
+        <div class="check">✓</div>
+        <div><h3>No wallet can be frozen</h3><p>Freeze authority was never enabled on this token — holder funds cannot be locked by anyone.</p></div>
+      </div>
+      <div class="trust-item">
+        <div class="check">✓</div>
+        <div><h3>Liquidity will be locked or burned</h3><p>When the pool is live, LP tokens will be burned or time-locked so liquidity can't be silently withdrawn.</p></div>
+      </div>
+      <div class="trust-item">
+        <div class="check">✓</div>
+        <div><h3>Allocation is disclosed, not hidden</h3><p>Treasury and team holdings will be published with wallet addresses before trading opens.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="roadmap" class="wrap">
+    <div class="section-head">
+      <div class="eyebrow-sm mono">04 — Roadmap</div>
+      <h2 class="display">Where things stand</h2>
+    </div>
+    <div class="roadmap">
+      <div class="rm-item done">
+        <div class="rm-phase">Phase 1 — Complete</div>
+        <div class="rm-title">Token live on mainnet</div>
+        <div class="rm-desc">Created, metadata attached, mint authority disabled, freeze never enabled.</div>
+      </div>
+      <div class="rm-item">
+        <div class="rm-phase">Phase 2</div>
+        <div class="rm-title">Public presence</div>
+        <div class="rm-desc">This site, allocation disclosure, and community channels go live.</div>
+      </div>
+      <div class="rm-item">
+        <div class="rm-phase">Phase 3</div>
+        <div class="rm-title">Liquidity pool</div>
+        <div class="rm-desc">Pool created and paired with SOL; LP tokens locked or burned.</div>
+      </div>
+      <div class="rm-item">
+        <div class="rm-phase">Phase 4</div>
+        <div class="rm-title">Buyback & burn</div>
+        <div class="rm-desc">Automated buyback mechanism funded by future project revenue.</div>
+      </div>
+      <div class="rm-item">
+        <div class="rm-phase">Phase 5</div>
+        <div class="rm-title">Staking</div>
+        <div class="rm-desc">Optional staking program, pending design and audit.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="links" class="wrap">
+    <div class="section-head">
+      <div class="eyebrow-sm mono">05 — Links</div>
+      <h2 class="display">Verify it yourself</h2>
+    </div>
+    <div class="link-grid">
+      <a class="link-card" href="https://solscan.io/token/2wdpJ9jx6MscrAbtfuAFNYG8a5vYgtZggBdVu9gKLCH3" target="_blank" rel="noopener">
+        <span class="name">Solscan</span><span class="arrow">↗</span>
+      </a>
+      <a class="link-card" href="https://explorer.solana.com/address/2wdpJ9jx6MscrAbtfuAFNYG8a5vYgtZggBdVu9gKLCH3" target="_blank" rel="noopener">
+        <span class="name">Solana Explorer</span><span class="arrow">↗</span>
+      </a>
+      <a class="link-card" href="#" target="_blank" rel="noopener">
+        <span class="name">X / Twitter</span><span class="arrow">↗</span>
+      </a>
+      <a class="link-card" href="#" target="_blank" rel="noopener">
+        <span class="name">Telegram</span><span class="arrow">↗</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="disclaimer">
+      This site is for informational purposes only and does not constitute financial, investment, or legal advice. Triac is an experimental, independently created token. Digital assets carry significant risk, including total loss of value. Nothing here is a promise of future price, listing, or liquidity. Always do your own research.
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">Triac — built in the open on Solana. © 2026</div>
+</footer>
+
+<script>
+function copyMint(){
+  const t = document.getElementById('mintAddr').textContent;
+  navigator.clipboard.writeText(t).then(()=>{
+    const b = document.getElementById('copyBtn');
+    b.textContent = '✓';
+    setTimeout(()=>{ b.textContent = '⧉'; }, 1500);
+  });
+}
+
+// subtle circuit-node background, echoing the logo's motif
+(function(){
+  const svg = document.getElementById('circuitBg');
+  const ns = 'http://www.w3.org/2000/svg';
+  const W=1000,H=1000;
+  const nodes = [];
+  const cols=6, rows=6;
+  for(let i=0;i<cols;i++){
+    for(let j=0;j<rows;j++){
+      if(Math.random()>0.55) continue;
+      nodes.push({x:(i+0.5)*(W/cols)+ (Math.random()-0.5)*60, y:(j+0.5)*(H/rows)+ (Math.random()-0.5)*60});
+    }
+  }
+  // connect nearby nodes
+  const g = document.createElementNS(ns,'g');
+  g.setAttribute('stroke','url(#gradLine)');
+  g.setAttribute('stroke-width','1');
+  g.setAttribute('fill','none');
+  for(let i=0;i<nodes.length;i++){
+    for(let j=i+1;j<nodes.length;j++){
+      const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<220){
+        const line=document.createElementNS(ns,'line');
+        line.setAttribute('x1',nodes[i].x);line.setAttribute('y1',nodes[i].y);
+        line.setAttribute('x2',nodes[j].x);line.setAttribute('y2',nodes[j].y);
+        line.setAttribute('opacity', (1-dist/220)*0.35);
+        g.appendChild(line);
+      }
+    }
+  }
+  const defs = document.createElementNS(ns,'defs');
+  defs.innerHTML = '<linearGradient id="gradLine" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#49E0C8"/><stop offset="100%" stop-color="#8B6BFF"/></linearGradient>';
+  svg.appendChild(defs);
+  svg.appendChild(g);
+  nodes.forEach((n,idx)=>{
+    const c=document.createElementNS(ns,'circle');
+    c.setAttribute('cx',n.x);c.setAttribute('cy',n.y);c.setAttribute('r','2.4');
+    c.setAttribute('fill', idx%2===0 ? '#49E0C8':'#8B6BFF');
+    c.setAttribute('opacity','0.5');
+    svg.appendChild(c);
+  });
+})();
+</script>
+
+</body>
+</html>
