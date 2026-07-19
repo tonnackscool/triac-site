@@ -225,6 +225,7 @@
       <li><a href="#roadmap">Roadmap</a></li>
       <li><a href="https://x.com/TriacSOL" target="_blank" rel="noopener">X</a></li>
       <li><a href="https://t.me/TriacSOL" target="_blank" rel="noopener">Telegram</a></li>
+      <li><button id="musicToggle" onclick="toggleMusic()" style="background:none;border:1px solid var(--line);color:var(--text-dim);border-radius:8px;padding:6px 12px;cursor:pointer;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;">🔇 Music</button></li>
     </ul>
   </nav>
 </header>
@@ -253,14 +254,14 @@
 
   <section id="market" class="wrap">
     <div class="section-head">
-      <div class="eyebrow-sm mono">— Live market</div>
+      <div class="eyebrow-sm mono">— Live market <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--teal);margin-left:6px;animation:pulse 2s ease-in-out infinite;"></span></div>
       <h2 class="display">Triac is live and tradeable</h2>
       <p class="section-desc">Pulled directly from the on-chain pool. Note: liquidity is currently shallow — expect price to move noticeably on even small trades.</p>
     </div>
     <div class="facts-grid" id="marketGrid">
-      <div class="fact"><div class="k">Price (USD)</div><div class="v teal" id="mkt-price">Loading…</div></div>
-      <div class="fact"><div class="k">Pool</div><div class="v">SOL / TRI</div></div>
-      <div class="fact"><div class="k">DEX</div><div class="v">Raydium (CPMM)</div></div>
+      <div class="fact"><div class="k">TRI Price (USD)</div><div class="v teal" id="mkt-price">Loading…</div></div>
+      <div class="fact"><div class="k">SOL Price (USD)</div><div class="v" id="mkt-sol-price" style="color:var(--violet);">Loading…</div></div>
+      <div class="fact"><div class="k">Last Updated</div><div class="v mono" id="mkt-updated" style="font-size:14px;">—</div></div>
     </div>
     <div class="hero-actions" style="margin-top:28px;justify-content:flex-start;">
       <a href="https://jup.ag/swap/SOL-2wdpJ9jx6MscrAbtfuAFNYG8a5vYgtZggBdVu9gKLCH3" target="_blank" rel="noopener" class="btn btn-primary">Buy TRI on Jupiter</a>
@@ -362,15 +363,15 @@
         <div class="rm-title">Liquidity pool</div>
         <div class="rm-desc">Pool created on Raydium, paired with SOL. Currently shallow — depth will be added over time.</div>
       </div>
-      <div class="rm-item">
-        <div class="rm-phase">Phase 4</div>
-        <div class="rm-title">Scheduled token burns</div>
-        <div class="rm-desc">500,000 TRI committed to be burned from treasury holdings in quarterly increments of 125,000 TRI, reducing circulating and total supply over time. Intended to offset long-term dilution from treasury holdings and demonstrate ongoing commitment beyond the initial fixed-supply guarantee. Each burn transaction will be publicly verifiable on Solscan and announced on X/Telegram.</div>
-      </div>
       <div class="rm-item done">
-        <div class="rm-phase">Phase 5 — Complete</div>
+        <div class="rm-phase">Phase 4 — Complete</div>
         <div class="rm-title">Staking</div>
         <div class="rm-desc">Live at stake.smithii.io/triac, ~5% APY, funded from a dedicated treasury allocation.</div>
+      </div>
+      <div class="rm-item">
+        <div class="rm-phase">Phase 5</div>
+        <div class="rm-title">Scheduled token burns</div>
+        <div class="rm-desc">500,000 TRI committed to be burned from treasury holdings in quarterly increments of 125,000 TRI, reducing circulating and total supply over time. Intended to offset long-term dilution from treasury holdings and demonstrate ongoing commitment beyond the initial fixed-supply guarantee. Each burn transaction will be publicly verifiable on Solscan and announced on X/Telegram.</div>
       </div>
     </div>
   </section>
@@ -431,22 +432,87 @@
 </footer>
 
 <script>
-// Fetch live price from Jupiter's public price API
-(async function loadMarketData(){
-  const priceEl = document.getElementById('mkt-price');
-  const mint = '2wdpJ9jx6MscrAbtfuAFNYG8a5vYgtZggBdVu9gKLCH3';
-  try{
-    const res = await fetch(`https://api.jup.ag/price/v2?ids=${mint}`);
-    const data = await res.json();
-    const price = data?.data?.[mint]?.price;
-    if(price){
-      priceEl.textContent = '$' + Number(price).toFixed(8);
-    } else {
-      priceEl.textContent = 'See Solscan →';
-    }
-  }catch(e){
-    priceEl.textContent = 'See Solscan →';
+// Ambient background music — generative pad, no external files, off by default
+let audioCtx, musicPlaying = false, musicNodes = [];
+
+function startMusic(){
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.06; // subtle
+  masterGain.connect(audioCtx.destination);
+
+  // Soft pad: a few detuned sine oscillators over a slow-moving chord (teal/violet mood — Cmaj9-ish)
+  const freqs = [130.81, 164.81, 196.00, 246.94, 293.66]; // C3 E3 G3 B3 D4
+  freqs.forEach((f, i) => {
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = f;
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0;
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start();
+
+    // slow fade-in, then gentle breathing volume
+    const now = audioCtx.currentTime;
+    gain.gain.linearRampToValueAtTime(1 / freqs.length, now + 3 + i * 0.5);
+    const lfo = audioCtx.createOscillator();
+    lfo.frequency.value = 0.05 + i * 0.01;
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 0.15 / freqs.length;
+    lfo.connect(lfoGain);
+    lfoGain.connect(gain.gain);
+    lfo.start();
+
+    musicNodes.push(osc, lfo, gain);
+  });
+}
+
+function stopMusic(){
+  if(audioCtx){
+    audioCtx.close();
+    musicNodes = [];
   }
+}
+
+function toggleMusic(){
+  const btn = document.getElementById('musicToggle');
+  musicPlaying = !musicPlaying;
+  if(musicPlaying){
+    startMusic();
+    btn.textContent = '🔊 Music';
+  } else {
+    stopMusic();
+    btn.textContent = '🔇 Music';
+  }
+}
+
+// Fetch live price from Jupiter's public price API — auto-refreshes every 15s
+(function initMarketFeed(){
+  const priceEl = document.getElementById('mkt-price');
+  const solPriceEl = document.getElementById('mkt-sol-price');
+  const updatedEl = document.getElementById('mkt-updated');
+  const triMint = '2wdpJ9jx6MscrAbtfuAFNYG8a5vYgtZggBdVu9gKLCH3';
+  const solMint = 'So11111111111111111111111111111111111111112';
+
+  async function loadMarketData(){
+    try{
+      const res = await fetch(`https://api.jup.ag/price/v2?ids=${triMint},${solMint}`);
+      const data = await res.json();
+      const triPrice = data?.data?.[triMint]?.price;
+      const solPrice = data?.data?.[solMint]?.price;
+
+      priceEl.textContent = triPrice ? '$' + Number(triPrice).toFixed(8) : 'See Solscan →';
+      solPriceEl.textContent = solPrice ? '$' + Number(solPrice).toFixed(2) : 'See Solscan →';
+      updatedEl.textContent = new Date().toLocaleTimeString();
+    }catch(e){
+      priceEl.textContent = 'See Solscan →';
+      solPriceEl.textContent = 'See Solscan →';
+    }
+  }
+
+  loadMarketData();
+  setInterval(loadMarketData, 15000); // refresh every 15s
 })();
 
 function copyMint(){
