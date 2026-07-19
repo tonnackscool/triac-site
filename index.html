@@ -217,6 +217,7 @@
   <nav class="wrap">
     <div class="brand"><span class="dot"></span>TRIAC</div>
     <ul>
+      <li><a href="#market">Market</a></li>
       <li><a href="#facts">Facts</a></li>
       <li><a href="#tokenomics">Tokenomics</a></li>
       <li><a href="#trust">Trust</a></li>
@@ -239,6 +240,23 @@
       <span class="label mono">Mint</span>
       <code id="mintAddr">2wdpJ9jx6MscrAbtfuAFNYG8a5vYgtZggBdVu9gKLCH3</code>
       <button class="copy-btn" onclick="copyMint()" aria-label="Copy mint address" id="copyBtn">⧉</button>
+    </div>
+  </section>
+
+  <section id="market" class="wrap">
+    <div class="section-head">
+      <div class="eyebrow-sm mono">— Live market</div>
+      <h2 class="display">Triac is live and tradeable</h2>
+      <p class="section-desc">Pulled directly from the on-chain pool. Note: liquidity is currently shallow — expect price to move noticeably on even small trades.</p>
+    </div>
+    <div class="facts-grid" id="marketGrid">
+      <div class="fact"><div class="k">Price (USD)</div><div class="v teal" id="mkt-price">Loading…</div></div>
+      <div class="fact"><div class="k">Pool</div><div class="v">SOL / TRI</div></div>
+      <div class="fact"><div class="k">DEX</div><div class="v">Raydium (CPMM)</div></div>
+    </div>
+    <div class="hero-actions" style="margin-top:28px;justify-content:flex-start;">
+      <a href="https://jup.ag/swap/SOL-2wdpJ9jx6MscrAbtfuAFNYG8a5vYgtZggBdVu9gKLCH3" target="_blank" rel="noopener" class="btn btn-primary">Buy TRI on Jupiter</a>
+      <a href="https://solscan.io/token/2wdpJ9jx6MscrAbtfuAFNYG8a5vYgtZggBdVu9gKLCH3#markets" target="_blank" rel="noopener" class="btn btn-ghost">View pool on Solscan</a>
     </div>
   </section>
 
@@ -373,6 +391,24 @@
 </footer>
 
 <script>
+// Fetch live price from Jupiter's public price API
+(async function loadMarketData(){
+  const priceEl = document.getElementById('mkt-price');
+  const mint = '2wdpJ9jx6MscrAbtfuAFNYG8a5vYgtZggBdVu9gKLCH3';
+  try{
+    const res = await fetch(`https://api.jup.ag/price/v2?ids=${mint}`);
+    const data = await res.json();
+    const price = data?.data?.[mint]?.price;
+    if(price){
+      priceEl.textContent = '$' + Number(price).toFixed(8);
+    } else {
+      priceEl.textContent = 'See Solscan →';
+    }
+  }catch(e){
+    priceEl.textContent = 'See Solscan →';
+  }
+})();
+
 function copyMint(){
   const t = document.getElementById('mintAddr').textContent;
   navigator.clipboard.writeText(t).then(()=>{
