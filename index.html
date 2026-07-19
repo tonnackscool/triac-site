@@ -497,17 +497,29 @@ function toggleMusic(){
 
   async function loadMarketData(){
     try{
-      const res = await fetch(`https://api.jup.ag/price/v2?ids=${triMint},${solMint}`);
+      const res = await fetch(`https://lite-api.jup.ag/price/v3?ids=${triMint},${solMint}`);
       const data = await res.json();
-      const triPrice = data?.data?.[triMint]?.price;
-      const solPrice = data?.data?.[solMint]?.price;
+      const triPrice = data?.[triMint]?.usdPrice;
+      const solPrice = data?.[solMint]?.usdPrice;
 
-      priceEl.textContent = triPrice ? '$' + Number(triPrice).toFixed(8) : 'See Solscan →';
-      solPriceEl.textContent = solPrice ? '$' + Number(solPrice).toFixed(2) : 'See Solscan →';
-      updatedEl.textContent = new Date().toLocaleTimeString();
+      if(triPrice || solPrice){
+        priceEl.textContent = triPrice ? '$' + Number(triPrice).toFixed(8) : 'See Solscan →';
+        solPriceEl.textContent = solPrice ? '$' + Number(solPrice).toFixed(2) : 'See Solscan →';
+        updatedEl.textContent = new Date().toLocaleTimeString();
+        return;
+      }
+      throw new Error('no price data');
     }catch(e){
+      // fallback: CoinGecko for SOL at least
+      try{
+        const cg = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+        const cgData = await cg.json();
+        solPriceEl.textContent = cgData?.solana?.usd ? '$' + Number(cgData.solana.usd).toFixed(2) : 'See Solscan →';
+      }catch(e2){
+        solPriceEl.textContent = 'See Solscan →';
+      }
       priceEl.textContent = 'See Solscan →';
-      solPriceEl.textContent = 'See Solscan →';
+      updatedEl.textContent = new Date().toLocaleTimeString();
     }
   }
 
